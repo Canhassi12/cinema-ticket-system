@@ -1,0 +1,9 @@
+POST  http://localhost:3000/reserve/oie
+Content-Type: application/json
+
+{
+    "price": "half",
+    "seat": 2,
+    "movie": "the fodase",
+    "ticketId": "7b527ca2-e377-11ed-b5ea-0242ac120002"
+}
