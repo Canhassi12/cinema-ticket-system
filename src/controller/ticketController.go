@@ -20,8 +20,8 @@ func (controller *TicketController) GetById(ticketId string) (models.Ticket, err
 	return ticketModel, err
 }
 
-func (controller *TicketController) ReserveForPay(userId string, data requests.Payload) error {
-	if err := controller.ticketService.ReserveForPay(userId, data); err != nil {
+func (controller *TicketController) ReserveForPay(ticketId string, data requests.Payload) error {
+	if err := controller.ticketService.ReserveForPay(ticketId, data); err != nil {
 		return err
 	}
 
@@ -36,4 +36,12 @@ func (controller *TicketController) GetAll(movieId string) ([]models.Ticket, err
 	}
 
 	return ticketModels, nil
+}
+
+func (controller *TicketController) Pay(ticketId string, data requests.Payload) error {
+	if err := controller.ticketService.PayTicket(ticketId, data.UserId); err != nil {
+		return err
+	}
+
+	return nil
 }

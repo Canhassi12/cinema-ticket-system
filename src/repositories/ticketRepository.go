@@ -11,9 +11,10 @@ import (
 
 type TicketRepositoryInterface interface {
 	GetById(session *gocqlx.Session, ticketId string) (models.Ticket, error)
-	Update(session *gocqlx.Session, userId string, data requests.Payload) error
+	Update(session *gocqlx.Session, ticketId string, data requests.Payload) error
 	GetAll(session *gocqlx.Session, movieId string) ([]models.Ticket, error)
 	FreeStatus(session *gocqlx.Session) error
+	FinishedStatus(session *gocqlx.Session, ticketId string) error
 }
 
 type TicketRepository struct {
@@ -33,13 +34,13 @@ func (ticketRepository *TicketRepository) GetById(session *gocqlx.Session, ticke
 	return ticketModel, nil
 }
 
-func (ticketRepository *TicketRepository) Update(session *gocqlx.Session, userId string, data requests.Payload) error {
+func (ticketRepository *TicketRepository) Update(session *gocqlx.Session, ticketId string, data requests.Payload) error {
 	ticketModel := models.Ticket{
 		Movie:  data.Movie,
 		Seat:   12,
 		Price:  models.FromPrice(data.Price),
 		Status: models.Pending,
-		UserId: userId,
+		UserId: data.UserId,
 	}
 
 	q := session.Query(
@@ -55,7 +56,7 @@ func (ticketRepository *TicketRepository) Update(session *gocqlx.Session, userId
 			":user_id":   ticketModel.UserId,
 			":timestamp": time.Now(),
 			":seat":      ticketModel.Seat,
-			":ticket_id": data.TicketId,
+			":ticket_id": ticketId,
 		})
 
 	res, err := q.ExecCASRelease()
@@ -127,6 +128,25 @@ func (ticketRepository *TicketRepository) FreeStatus(session *gocqlx.Session) er
 		}
 
 		fmt.Printf("the ticket %s, it was released", v.Ticket_id)
+	}
+
+	return nil
+}
+
+func (ticketRepository *TicketRepository) FinishedStatus(session *gocqlx.Session, ticketId string) error {
+	q := session.Query(
+		`UPDATE go.tickets SET 
+			status = 'finished',
+			timestamp = :timestamp
+			WHERE ticket_id = :ticket_id`,
+		[]string{":timestamp", ":ticket_id"}).
+		BindMap(map[string]interface{}{
+			":timestamp": time.Now(),
+			":ticket_id": ticketId,
+		})
+
+	if err := q.ExecRelease(); err != nil {
+		return fmt.Errorf("error in exec finished status query: %w, ticket_id: %s", err, ticketId)
 	}
 
 	return nil

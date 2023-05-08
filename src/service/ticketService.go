@@ -5,15 +5,18 @@ import (
 	"a/src/models"
 	"a/src/repositories"
 	"a/src/requests"
+	"fmt"
 
 	"github.com/scylladb/gocqlx/v2"
 )
 
 type TicketServiceInterface interface {
 	GetById(ticketId string) (models.Ticket, error)
-	ReserveForPay(userId string, data requests.Payload) error
+	ReserveForPay(ticketId string, data requests.Payload) error
 	ReleaseTicket(session *gocqlx.Session) error
 	GetAllTickets(movieId string) ([]models.Ticket, error)
+	PayTicket(ticketId string, userId string) error
+	CheckItsSameUser(session *gocqlx.Session, ticketId string, userId string) error
 }
 
 type TicketService struct {
@@ -35,10 +38,10 @@ func (ticketService *TicketService) GetById(ticketId string) (models.Ticket, err
 	return ticketModel, err
 }
 
-func (ticketService *TicketService) ReserveForPay(userId string, data requests.Payload) error {
+func (ticketService *TicketService) ReserveForPay(ticketId string, data requests.Payload) error {
 	session := ticketService.db.Conn()
 
-	err := ticketService.ticketRepository.Update(session, userId, data)
+	err := ticketService.ticketRepository.Update(session, ticketId, data)
 
 	if err != nil {
 		return err
@@ -65,4 +68,34 @@ func (ticketService *TicketService) GetAllTickets(movieId string) ([]models.Tick
 	}
 
 	return ticketModels, nil
+}
+
+func (ticketService *TicketService) PayTicket(ticketId string, userId string) error {
+	session := ticketService.db.Conn()
+
+	if err := ticketService.CheckItsSameUser(session, ticketId, userId); err != nil {
+		return err
+	}
+
+	// payment ...
+
+	if err := ticketService.ticketRepository.FinishedStatus(session, ticketId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (ticketService *TicketService) CheckItsSameUser(session *gocqlx.Session, ticketId string, userId string) error {
+	ticketModel, err := ticketService.ticketRepository.GetById(session, ticketId)
+
+	if err != nil {
+		return err
+	}
+
+	if userId != ticketModel.UserId {
+		return fmt.Errorf("sorry, this ticket belongs to someone else")
+	}
+
+	return nil
 }

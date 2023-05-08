@@ -5,4 +5,5 @@ type Payload struct {
 	Movie    string `json:"movie"`
 	Seat     int    `json:"seat"`
 	TicketId string `json:"ticketId"`
+	UserId   string `json:"userId"`
 }

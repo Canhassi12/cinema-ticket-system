@@ -29,6 +29,7 @@ func main() {
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
 		jsonBytes, err := json.Marshal(ticketModel)
@@ -36,6 +37,7 @@ func main() {
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
 		w.Write([]byte(jsonBytes))
@@ -47,6 +49,7 @@ func main() {
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
 		jsonBytes, err := json.Marshal(ticketModels)
@@ -54,17 +57,19 @@ func main() {
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
 		w.Write([]byte(jsonBytes))
 	})
 
-	r.Post("/reserve/{userId}", func(w http.ResponseWriter, r *http.Request) {
+	r.Post("/reserve/{ticketId}", func(w http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
 		var m requests.Payload = requests.Payload{}
@@ -73,14 +78,43 @@ func main() {
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte("Error unmarshalling request body"))
+			return
 		}
 
-		if err := ticketController.ReserveForPay(chi.URLParam(r, "userId"), m); err != nil {
+		if err := ticketController.ReserveForPay(chi.URLParam(r, "ticketId"), m); err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
+			return
 		}
 
-		w.Write([]byte("Success"))
+		w.Write([]byte("you reserve this seat, you have ten minutes to pay that"))
+	})
+
+	r.Put("/reserve/{ticketId}", func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		var m requests.Payload = requests.Payload{}
+		err = json.Unmarshal(body, &m)
+
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte("Error unmarshalling request body"))
+			return
+		}
+
+		if err := ticketController.Pay(chi.URLParam(r, "ticketId"), m); err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(err.Error()))
+			return
+		}
+
+		w.Write([]byte("the payment was successful"))
 	})
 
 	http.ListenAndServe(":3000", r)
