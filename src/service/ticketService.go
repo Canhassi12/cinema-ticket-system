@@ -5,15 +5,15 @@ import (
 	"a/src/models"
 	"a/src/repositories"
 	"a/src/requests"
-	"context"
-	"fmt"
 
-	"github.com/scylladb/scylla-go-driver"
+	"github.com/scylladb/gocqlx/v2"
 )
 
 type TicketServiceInterface interface {
-	GetById(ticketId string, requestCtx context.Context) (*models.Ticket, error)
-	ReserveForPay(userId string, data requests.Payload, requestCtx context.Context) error
+	GetById(ticketId string) (models.Ticket, error)
+	ReserveForPay(userId string, data requests.Payload) error
+	ReleaseTicket(session *gocqlx.Session) error
+	GetAllTickets(movieId string) ([]models.Ticket, error)
 }
 
 type TicketService struct {
@@ -25,24 +25,20 @@ func New(ticketRepository repositories.TicketRepositoryInterface, db database.Sc
 	return TicketService{ticketRepository: ticketRepository, db: db}
 }
 
-func (ticketService *TicketService) GetById(ticketId string, requestCtx context.Context) (*models.Ticket, error) {
+func (ticketService *TicketService) GetById(ticketId string) (models.Ticket, error) {
 	session := ticketService.db.Conn()
 
 	defer session.Close()
 
-	ticketModel, err := ticketService.ticketRepository.GetById(requestCtx, session, ticketId)
+	ticketModel, err := ticketService.ticketRepository.GetById(session, ticketId)
 
 	return ticketModel, err
 }
 
-func (ticketService *TicketService) ReserveForPay(userId string, data requests.Payload, requestCtx context.Context) error {
+func (ticketService *TicketService) ReserveForPay(userId string, data requests.Payload) error {
 	session := ticketService.db.Conn()
 
-	if err := ticketService.CheckPendences(requestCtx, session, userId, data.TicketId); err != nil {
-		return err
-	}
-
-	err := ticketService.ticketRepository.Update(requestCtx, session, userId, data)
+	err := ticketService.ticketRepository.Update(session, userId, data)
 
 	if err != nil {
 		return err
@@ -51,24 +47,22 @@ func (ticketService *TicketService) ReserveForPay(userId string, data requests.P
 	return nil
 }
 
-func (ticketService *TicketService) CheckPendences(requestCtx context.Context, session *scylla.Session, userId string, ticketId string) error {
-	ticket, err := ticketService.ticketRepository.GetById(requestCtx, session, ticketId)
-
-	if err != nil {
+func (ticketService *TicketService) ReleaseTicket(session *gocqlx.Session) error {
+	if err := ticketService.ticketRepository.FreeStatus(session); err != nil {
 		return err
 	}
 
-	itsDifferentUser := ticket.UserId != userId
-
-	if !itsDifferentUser {
-		return fmt.Errorf("Sorry, another user is buying")
-	}
-
-	itsPending := ticket.Status == "pending"
-
-	if itsPending {
-		return fmt.Errorf("This ticket already be pending")
-	}
-
 	return nil
+}
+
+func (ticketService *TicketService) GetAllTickets(movieId string) ([]models.Ticket, error) {
+	session := ticketService.db.Conn()
+
+	ticketModels, err := ticketService.ticketRepository.GetAll(session, movieId)
+
+	if err != nil {
+		return ticketModels, err
+	}
+
+	return ticketModels, nil
 }

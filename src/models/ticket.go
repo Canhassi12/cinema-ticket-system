@@ -1,11 +1,18 @@
 package models
 
+import "time"
+
 type Ticket struct {
-	Price  int
-	Movie  string `json:"movie"`
-	Seat   int    `json:"seat"`
-	Status string
-	UserId string
+	Ticket_id string
+	Price     int
+	Movie     string `json:"movie"`
+	Seat      int    `json:"seat"`
+	Status    string
+	UserId    string
+	Timestamp time.Time
+}
+
+type TicketInterface interface {
 }
 
 var (

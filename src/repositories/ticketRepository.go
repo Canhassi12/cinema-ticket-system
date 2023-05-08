@@ -3,137 +3,131 @@ package repositories
 import (
 	"a/src/models"
 	"a/src/requests"
-	"context"
 	"fmt"
 	"time"
 
-	"github.com/scylladb/scylla-go-driver"
+	"github.com/scylladb/gocqlx/v2"
 )
 
-const Table = "tickets"
-
 type TicketRepositoryInterface interface {
-	GetById(requestCtx context.Context, session *scylla.Session, ticketId string) (*models.Ticket, error)
-	Update(requestCtx context.Context, session *scylla.Session, userId string, data requests.Payload) error
+	GetById(session *gocqlx.Session, ticketId string) (models.Ticket, error)
+	Update(session *gocqlx.Session, userId string, data requests.Payload) error
+	GetAll(session *gocqlx.Session, movieId string) ([]models.Ticket, error)
+	FreeStatus(session *gocqlx.Session) error
 }
 
 type TicketRepository struct {
 }
 
-func (*TicketRepository) GetById(requestCtx context.Context, session *scylla.Session, ticketId string) (*models.Ticket, error) {
-	q, err := session.Prepare(requestCtx, "SELECT id, price, seat, movie, status, user_id FROM tickets WHERE id="+ticketId)
+func (ticketRepository *TicketRepository) GetById(session *gocqlx.Session, ticketId string) (models.Ticket, error) {
 
-	if err != nil {
-		return nil, err
+	var ticketModel models.Ticket
+
+	q := session.Query("SELECT ticket_id, price, seat, movie, status, user_id FROM go.tickets WHERE ticket_id=:ticket_id", []string{":ticket_id"}).
+		BindMap(map[string]interface{}{":ticket_id": ticketId})
+
+	if err := q.GetRelease(&ticketModel); err != nil {
+		return ticketModel, err
 	}
 
-	res, err := q.Exec(requestCtx)
-
-	if err != nil {
-		return nil, err
-	}
-
-	// id, err := res.Rows[0][1].AsUUID()
-
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	price, err := res.Rows[0][1].AsInt32()
-
-	if err != nil {
-		return nil, err
-	}
-
-	seat, err := res.Rows[0][2].AsInt32()
-
-	if err != nil {
-		return nil, err
-	}
-
-	movie, err := res.Rows[0][3].AsText()
-
-	if err != nil {
-		return nil, err
-	}
-
-	status, err := res.Rows[0][4].AsText()
-
-	if err != nil {
-		return nil, err
-	}
-
-	userId, err := res.Rows[0][5].AsText()
-
-	if err != nil {
-		return nil, err
-	}
-
-	ticketModel := models.Ticket{Price: int(price), Movie: movie, Seat: int(seat), Status: status, UserId: userId}
-
-	if err != nil {
-		return nil, err
-	}
-
-	return &ticketModel, nil
+	return ticketModel, nil
 }
 
-func (ticketRepository *TicketRepository) Update(requestCtx context.Context, session *scylla.Session, userId string, data requests.Payload) error {
-
+func (ticketRepository *TicketRepository) Update(session *gocqlx.Session, userId string, data requests.Payload) error {
 	ticketModel := models.Ticket{
 		Movie:  data.Movie,
-		Seat:   2,
+		Seat:   12,
 		Price:  models.FromPrice(data.Price),
 		Status: models.Pending,
 		UserId: userId,
 	}
 
-	q, err := session.Prepare(requestCtx, fmt.Sprintf(
-		"UPDATE %s SET movie = %s seat = %d price = %d status = %s user_id = %s",
-		Table,
-		ticketModel.Movie,
-		ticketModel.Seat,
-		ticketModel.Price,
-		ticketModel.Status,
-		ticketModel.UserId),
-	)
+	q := session.Query(
+		`UPDATE go.tickets SET 
+		   	status = :status,
+		    user_id = :user_id,
+			timestamp = :timestamp
+			WHERE ticket_id = :ticket_id
+			IF status ='free'`,
+		[]string{":status", ":user_id", ":timestamp", ":ticket_id"}).
+		BindMap(map[string]interface{}{
+			":status":    ticketModel.Status,
+			":user_id":   ticketModel.UserId,
+			":timestamp": time.Now(),
+			":seat":      ticketModel.Seat,
+			":ticket_id": data.TicketId,
+		})
+
+	res, err := q.ExecCASRelease()
 
 	if err != nil {
-		return err
+		return fmt.Errorf("error in exec update query: %w", err)
 	}
 
-	res, err := q.Exec(requestCtx)
-
-	if err != nil {
-		return err
+	if !res {
+		return fmt.Errorf("this ticket already be reserved")
 	}
-
-	fmt.Printf("%v", res)
-
-	go ticketRepository.FreeStatus(requestCtx, session, ticketModel)
 
 	return nil
 }
 
-func (*TicketRepository) FreeStatus(
-	requestCtx context.Context,
-	session *scylla.Session,
-	ticketModel models.Ticket,
-) {
-	time.Sleep(time.Minute * 10)
+func (ticketRepository *TicketRepository) GetAll(session *gocqlx.Session, movieId string) ([]models.Ticket, error) {
+	ticketModel := []models.Ticket{}
 
-	_, err := session.Prepare(requestCtx, fmt.Sprintf(
-		"UPDATE %s SET movie = %s seat = %d price = %d status = %s user_id = null",
-		Table,
-		ticketModel.Movie,
-		ticketModel.Seat,
-		ticketModel.Price,
-		models.Free),
-	)
+	q := session.Query("SELECT * FROM go.tickets WHERE movie = :movie", []string{":movie"}).
+		BindMap(map[string]interface{}{":movie": movieId})
+
+	if err := q.SelectRelease(&ticketModel); err != nil {
+		return ticketModel, fmt.Errorf("error in exec get all tickets query: %w", err)
+	}
+
+	return ticketModel, nil
+}
+
+func (ticketRepository *TicketRepository) GetPending(session *gocqlx.Session) ([]models.Ticket, error) {
+	ticketModel := []models.Ticket{}
+
+	q := session.Query("SELECT * FROM go.tickets WHERE status = 'pending'", []string{})
+
+	if err := q.SelectRelease(&ticketModel); err != nil {
+		return ticketModel, fmt.Errorf("error in exec get pending tickets query: %w", err)
+	}
+
+	return ticketModel, nil
+}
+
+func (ticketRepository *TicketRepository) FreeStatus(session *gocqlx.Session) error {
+	ticketModels, err := ticketRepository.GetPending(session)
 
 	if err != nil {
-		value, _ := fmt.Printf("problems to free this %d seat, error: %s", ticketModel.Seat, err.Error())
-
-		panic(value)
+		return err
 	}
+
+	for _, v := range ticketModels {
+
+		diff := time.Now().After(v.Timestamp.Add(time.Minute))
+
+		if !diff {
+			return nil
+		}
+
+		q := session.Query(
+			`UPDATE go.tickets SET 
+				status = 'free',
+				user_id = '',
+				timestamp = ''
+				WHERE ticket_id = :ticket_id`,
+			[]string{":ticket_id"}).
+			BindMap(map[string]interface{}{
+				":ticket_id": v.Ticket_id,
+			})
+
+		if err := q.ExecRelease(); err != nil {
+			return fmt.Errorf("error in exec free status query: %w, ticket_id: %s", err, v.Ticket_id)
+		}
+
+		fmt.Printf("the ticket %s, it was released", v.Ticket_id)
+	}
+
+	return nil
 }

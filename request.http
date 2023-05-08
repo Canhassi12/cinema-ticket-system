@@ -4,6 +4,6 @@ Content-Type: application/json
 {
     "price": "half",
     "seat": 2,
-    "movie": "the fodase",
-    "ticketId": "7b527ca2-e377-11ed-b5ea-0242ac120002"
+    "movie": "canhassi",
+    "ticketId": "1a76c0b5-08b0-416d-8ca5-255f92a0c77b"
 }

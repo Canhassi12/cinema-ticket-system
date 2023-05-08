@@ -1,26 +1,24 @@
 package database
 
 import (
-	"context"
-
-	"github.com/scylladb/scylla-go-driver"
+	"github.com/gocql/gocql"
+	"github.com/scylladb/gocqlx/v2"
 )
 
 type ScyllaConn struct{}
 
 type ScyllaConnInterface interface {
-	Conn() *scylla.Session
+	Conn() *gocqlx.Session
 }
 
-func (ScyllaConn) Conn() *scylla.Session {
-	ctx := context.Background()
+func (ScyllaConn) Conn() *gocqlx.Session {
+	cluster := gocql.NewCluster("127.0.0.1:8000")
 
-	cfg := scylla.DefaultSessionConfig("go", "127.0.0.1:8000")
-	session, err := scylla.NewSession(ctx, cfg)
+	session, err := gocqlx.WrapSession(cluster.CreateSession())
 
 	if err != nil {
-		panic("DEU ERRO AUQIO CNHASS PAMIGAOSD")
+		panic(err.Error())
 	}
 
-	return session
+	return &session
 }

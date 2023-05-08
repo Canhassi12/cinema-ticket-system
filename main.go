@@ -3,6 +3,7 @@ package main
 import (
 	"a/src/database"
 	"a/src/repositories"
+	"a/src/requests"
 	"a/src/service"
 	"encoding/json"
 	"io"
@@ -12,7 +13,6 @@ import (
 	"github.com/go-chi/chi/middleware"
 
 	controllers "a/src/controller"
-	"a/src/requests"
 )
 
 func main() {
@@ -31,14 +31,32 @@ func main() {
 			w.Write([]byte(err.Error()))
 		}
 
-		ticket, err := json.Marshal(ticketModel)
+		jsonBytes, err := json.Marshal(ticketModel)
 
 		if err != nil {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
 		}
 
-		w.Write([]byte(ticket))
+		w.Write([]byte(jsonBytes))
+	})
+
+	r.Get("/tickets/{movieId}", func(w http.ResponseWriter, r *http.Request) {
+		ticketModels, err := ticketController.GetAll(chi.URLParam(r, "movieId"))
+
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(err.Error()))
+		}
+
+		jsonBytes, err := json.Marshal(ticketModels)
+
+		if err != nil {
+			w.WriteHeader(500)
+			w.Write([]byte(err.Error()))
+		}
+
+		w.Write([]byte(jsonBytes))
 	})
 
 	r.Post("/reserve/{userId}", func(w http.ResponseWriter, r *http.Request) {
@@ -61,6 +79,8 @@ func main() {
 			w.WriteHeader(500)
 			w.Write([]byte(err.Error()))
 		}
+
+		w.Write([]byte("Success"))
 	})
 
 	http.ListenAndServe(":3000", r)
