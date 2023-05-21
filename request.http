@@ -1,2 +1,2 @@
-GET http://localhost:3000/tickets/opa
+GET  http://localhost:3000/tickets/opa
 Content-Type: application/json
