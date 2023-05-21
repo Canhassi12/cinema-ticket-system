@@ -1,10 +1,10 @@
 package handler
 
 import (
-	controllers "a/src/controller"
-	"a/src/database"
-	"a/src/repositories"
-	"a/src/service"
+	controllers "ticket-system/src/controller"
+	"ticket-system/src/database"
+	"ticket-system/src/repositories"
+	"ticket-system/src/service"
 )
 
 var (

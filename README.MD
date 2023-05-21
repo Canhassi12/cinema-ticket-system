@@ -11,6 +11,8 @@ The main objective of this project was, learn a little bit more about golang, an
     <img style="width: 110px; height: 85px" src="https://docs.scylladb.com/_static/img/mascots/scylla-with-computer-2.png">
 </div>
 
+## Commands 
+
 ## Reference 
 
 [Reservation Pattern - PDF](https://freecontent.manning.com/wp-content/uploads/reservation-pattern.pdf)

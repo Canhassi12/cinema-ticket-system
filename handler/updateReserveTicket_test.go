@@ -1,12 +1,12 @@
 package handler
 
 import (
-	"a/src/requests"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"ticket-system/src/requests"
 )
 
 func mockUpdateReserveTicketSuccess(ticketId string, data requests.Payload) error {

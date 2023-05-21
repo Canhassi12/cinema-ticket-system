@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"a/src/models"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"ticket-system/src/models"
 )
 
 func mockGetTicketByIdSuccess(ticketId string) (models.Ticket, error) {

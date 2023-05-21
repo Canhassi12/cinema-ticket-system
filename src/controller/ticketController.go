@@ -1,9 +1,9 @@
 package controllers
 
 import (
-	"a/src/models"
-	"a/src/requests"
-	"a/src/service"
+	"ticket-system/src/models"
+	"ticket-system/src/requests"
+	"ticket-system/src/service"
 )
 
 type TicketController struct {

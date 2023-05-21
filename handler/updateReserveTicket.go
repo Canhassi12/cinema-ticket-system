@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"a/src/requests"
 	"encoding/json"
 	"io"
 	"net/http"
+	"ticket-system/src/requests"
 
 	"github.com/go-chi/chi"
 )

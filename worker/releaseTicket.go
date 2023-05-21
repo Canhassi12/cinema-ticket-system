@@ -1,10 +1,10 @@
 package main
 
 import (
-	"a/src/database"
-	"a/src/repositories"
-	"a/src/service"
 	"log"
+	"ticket-system/src/database"
+	"ticket-system/src/repositories"
+	"ticket-system/src/service"
 	"time"
 )
 

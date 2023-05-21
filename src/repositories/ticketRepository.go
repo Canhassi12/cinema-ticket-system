@@ -1,9 +1,9 @@
 package repositories
 
 import (
-	"a/src/models"
-	"a/src/requests"
 	"fmt"
+	"ticket-system/src/models"
+	"ticket-system/src/requests"
 	"time"
 
 	"github.com/scylladb/gocqlx/v2"

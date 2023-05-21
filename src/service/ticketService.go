@@ -1,11 +1,11 @@
 package service
 
 import (
-	"a/src/database"
-	"a/src/models"
-	"a/src/repositories"
-	"a/src/requests"
 	"fmt"
+	"ticket-system/src/database"
+	"ticket-system/src/models"
+	"ticket-system/src/repositories"
+	"ticket-system/src/requests"
 
 	"github.com/scylladb/gocqlx/v2"
 )
